@@ -31,7 +31,7 @@ A Server is many to many with Action Libraries, where any given action library w
 An Action Library is 1-to-many with Orchestrators, an Action Library dictates the scope of actions available to the Orchestrator, so an Orchestrator is based on a single Actions library, although multiple Orchestrators can be written for a given Actions.
 
 # Kernels
-The (Orchestrator, Action Library) runs in 1 kernel. Each (Server,Driver) runs on its own kernel. Cross-kernel communcation is via FastAPI.
+The (Orchestrator, Action Library) runs in 1 kernel. Each (Server,Driver) runs on its own kernel. Cross-kernel communication is via FastAPI.
 
 # git ignore
 The config folder in the repository will contain examples of how to specify the settings for each type of hardware, but each instrument-specific config file is relevant only the specific hardware and is thus the config folder is in git ignore.

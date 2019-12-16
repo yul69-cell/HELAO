@@ -1,4 +1,10 @@
-import gclib
+from config import *
+
+if galil_simulate:
+	import gclib_simulate as gclib
+else:
+	import gclib
+	
 import numpy as np
 import json
 import time

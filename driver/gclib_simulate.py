@@ -1,0 +1,1 @@
+#write functions like .py() and .GVersion() that behave like the real gclib
