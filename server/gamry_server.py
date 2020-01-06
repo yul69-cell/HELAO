@@ -6,7 +6,9 @@ from pydantic import BaseModel
 from gamry_driver import *
 from fastapi import Query
 from typing import List
+
 app = FastAPI()
+
 
 class return_class(BaseModel):
     measurement_type: str
@@ -15,29 +17,64 @@ class return_class(BaseModel):
 
 
 @app.get("/potentiostat/get/potential_ramp")
-async def pot_potential_ramp_wrap(Vinit: float, Vfinal: float, ScanRate: float, SampleRate: float):
+async def pot_potential_ramp_wrap(
+    Vinit: float, Vfinal: float, ScanRate: float, SampleRate: float
+):
     return return_class(**poti.potential_ramp(Vinit, Vfinal, ScanRate, SampleRate))
 
 
-
 @app.get("/potentiostat/get/potential_cycle")
-async def pot_potential_ramp_wrap(Vinit: float, Vfinal: float, Vapex1: float, Vapex2: float, ScanInit: float,
-                                  ScanApex: float, ScanFinal: float, HoldTime0: float, HoldTime1: float,
-                                  HoldTime2: float, Cycles: int, SampleRate: float, control_mode: str):
-    return return_class(**poti.potential_cycle(Vinit, Vfinal, Vapex1, Vapex2, ScanInit, ScanApex, ScanFinal, HoldTime0,
-                                            HoldTime1, HoldTime2, Cycles, SampleRate, control_mode))
+async def pot_potential_ramp_wrap(
+    Vinit: float,
+    Vfinal: float,
+    Vapex1: float,
+    Vapex2: float,
+    ScanInit: float,
+    ScanApex: float,
+    ScanFinal: float,
+    HoldTime0: float,
+    HoldTime1: float,
+    HoldTime2: float,
+    Cycles: int,
+    SampleRate: float,
+    control_mode: str,
+):
+    return return_class(
+        **poti.potential_cycle(
+            Vinit,
+            Vfinal,
+            Vapex1,
+            Vapex2,
+            ScanInit,
+            ScanApex,
+            ScanFinal,
+            HoldTime0,
+            HoldTime1,
+            HoldTime2,
+            Cycles,
+            SampleRate,
+            control_mode,
+        )
+    )
 
-@app.get('/potentiostat/get/eis')
-async def eis_(start_freq:float,end_freq:float,points: int, pot_offset: float = 0):
-    return return_class(**poti.eis(start_freq,end_freq,points,pot_offset))
+
+@app.get("/potentiostat/get/eis")
+async def eis_(start_freq: float, end_freq: float, points: int, pot_offset: float = 0):
+    return return_class(**poti.eis(start_freq, end_freq, points, pot_offset))
+
 
 @app.get("/potentiostat/get/status")
 def status_wrapper():
-    return return_class(measurement_type='status_query',parameters={'query':'potentiostat'},data=[poti.status()])
+    return return_class(
+        measurement_type="status_query",
+        parameters={"query": "potentiostat"},
+        data=[poti.status()],
+    )
 
-@app.get('/potentiostat/get/signal_arr')
+
+@app.get("/potentiostat/get/signal_arr")
 async def signal_array_(Cycles: int, SampleRate: float, arr: str):
-    arr = [float(i) for i in arr.split(',')]
+    arr = [float(i) for i in arr.split(",")]
     return return_class(**poti.signal_array(Cycles, SampleRate, arr))
 
 
@@ -47,14 +84,13 @@ def shutdown_event():
     # disconnect ... just restart or terminate the server
     poti.close_connection()
     loop.close()
-    return {'shutdown'}
-
+    return {"shutdown"}
 
 
 if __name__ == "__main__":
     poti = gamry()
     # makes this runnable and debuggable in VScode
     # letters of the alphabet GAMRY => G6 A0 M12 R17 Y24
-    uvicorn.run(app, host="127.0.0.1", port=8003)
+    uvicorn.run(app, host=FASTAPI_HOST, port=ECHEM_PORT)
 
     # http://127.0.0.1:8003/potentiostat/get/potential_ramp?Vinit=0&Vfinal=0.2&ScanRate=0.01&SampleRate=0.01

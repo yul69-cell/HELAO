@@ -4,8 +4,27 @@ import pickle
 import os
 import collections
 import numpy as np
-setupd = {'path_to_gamrycom': r'C:\Program Files (x86)\Gamry Instruments\Framework\GamryCOM.exe',
-          'temp_dump': r'C:\Users\hte\Documents\lab_automation\temp'}
+import sys
+
+if __package__:
+    # can import relative path in package mode
+    from ..config.config import *
+
+    print("imported config.py from package path")
+else:
+    # interactive kernel mode requires path manipulation
+    cwd = os.getcwd()
+    pwd = os.path.dirname(cwd)
+    if os.path.basename(pwd) == "HELAO":
+        sys.path.insert(0, pwd)
+    if pwd in sys.path or os.path.basename(cwd) == "HELAO":
+        from config.config import *
+
+        print("imported config.py from absolute path")
+    else:
+        print("unable to find config.py, current working directory is {}".format(cwd))
+
+setupd = GAMRY_SETUPD
 
 
 # definition of error handling things from gamry
@@ -17,7 +36,9 @@ def gamry_error_decoder(e):
     if isinstance(e, comtypes.COMError):
         hresult = 2 ** 32 + e.args[0]
         if hresult & 0x20000000:
-            return GamryCOMError('0x{0:08x}: {1}'.format(2 ** 32 + e.args[0], e.args[1]))
+            return GamryCOMError(
+                "0x{0:08x}: {1}".format(2 ** 32 + e.args[0], e.args[1])
+            )
     return e
 
 
@@ -45,46 +66,46 @@ class GamryDtaqEvents(object):
         # TODO:  indicate completion to enclosing code?
 
 
-class gamry():
+class gamry:
     # since the gamry connection uses one class and it can be switched on or off with handoff and everythong
     # I decided to put the gamry in a class ... this puts the logic into this class and not like in the motion server
     # where the logic is spread across the functions. TODO: Decide which way to implement this and streamline everywhere
     def __init__(self):
-        self.GamryCOM = client.GetModule(setupd['path_to_gamrycom'])
+        self.GamryCOM = client.GetModule(setupd["path_to_gamrycom"])
 
-        self.devices = client.CreateObject('GamryCOM.GamryDeviceList')
+        self.devices = client.CreateObject("GamryCOM.GamryDeviceList")
         # print(devices.EnumSections())
 
-        self.pstat = client.CreateObject('GamryCOM.GamryPC6Pstat')
+        self.pstat = client.CreateObject("GamryCOM.GamryPC6Pstat")
 
         # print(devices.EnumSections())
         try:
             self.pstat.Init(self.devices.EnumSections()[0])  # grab first pstat
         except IndexError:
-            print('No potentiostat is connected! Have you turned it on?')
+            print("No potentiostat is connected! Have you turned it on?")
         self.temp = []
 
     def open_connection(self):
         # this just tries to open a connection with try/catch
         try:
             self.pstat.Open()
-            return {'potentiostat_connection': 'connected'}
+            return {"potentiostat_connection": "connected"}
         except:
-            return {'potentiostat_connection': 'error'}
+            return {"potentiostat_connection": "error"}
 
     def close_connection(self):
         # this just tries to close a connection with try/catch
         try:
             self.pstat.Close()
-            return {'potentiostat_connection': 'closed'}
+            return {"potentiostat_connection": "closed"}
         except:
-            return {'potentiostat_connection': 'error'}
+            return {"potentiostat_connection": "error"}
 
-    def measurement_setup(self, gsetup='sweep'):
+    def measurement_setup(self, gsetup="sweep"):
         self.open_connection()
-        if gsetup == 'sweep':
+        if gsetup == "sweep":
             g = "GamryCOM.GamryDtaqCpiv"
-        if gsetup == 'cv':
+        if gsetup == "cv":
             g = "IGamryDtaqRcv"
         self.dtaqcpiv = client.CreateObject(g)
         self.dtaqcpiv.Init(self.pstat)
@@ -92,13 +113,13 @@ class gamry():
         self.dtaqsink = GamryDtaqEvents(self.dtaqcpiv)
 
     def measure(self, sigramp):
-        print('Opening Connection')
+        print("Opening Connection")
         ret = self.open_connection()
         self.pstat.SetIERange(8)
 
         print(ret)
         # push the signal ramp over
-        print('Pushing')
+        print("Pushing")
         self.pstat.SetSignal(sigramp)
 
         self.pstat.SetCell(self.GamryCOM.CellOn)
@@ -123,43 +144,74 @@ class gamry():
         try:
             return self.dtaqsink.status
         except:
-            return 'other'
+            return "other"
 
     def dump_data(self):
-        pickle.dump(self.data, open(os.path.join(setupd['temp_dump'], self.instance_id)))
+        pickle.dump(
+            self.data, open(os.path.join(setupd["temp_dump"], self.instance_id))
+        )
 
     def signal_array(self, Cycles: int, SampleRate: float, arr):
         arr = np.array(arr).tolist()
         # setup the experiment specific signal ramp
-        if len(arr)>262143:
+        if len(arr) > 262143:
             raise tooLongMeasurementError
 
         sigramp = client.CreateObject("GamryCOM.GamrySignalArray")
-        sigramp.Init(self.pstat, Cycles, SampleRate, len(arr), arr, self.GamryCOM.PstatMode)
+        sigramp.Init(
+            self.pstat, Cycles, SampleRate, len(arr), arr, self.GamryCOM.PstatMode
+        )
         # measure ... this will do the setup as well
         self.measure(sigramp)
-        return {'measurement_type': 'potential_ramp',
-                'parameters': {'Vinit': Cycles, 'Vfinal': SampleRate, 'SampleRate': SampleRate, 'Profile': arr},
-                'data': np.array(self.data).tolist()}
+        return {
+            "measurement_type": "potential_ramp",
+            "parameters": {
+                "Vinit": Cycles,
+                "Vfinal": SampleRate,
+                "SampleRate": SampleRate,
+                "Profile": arr,
+            },
+            "data": np.array(self.data).tolist(),
+        }
 
-
-    def potential_ramp(self, Vinit: float, Vfinal: float, ScanRate: float, SampleRate: float):
+    def potential_ramp(
+        self, Vinit: float, Vfinal: float, ScanRate: float, SampleRate: float
+    ):
         # setup the experiment specific signal ramp
         sigramp = client.CreateObject("GamryCOM.GamrySignalRamp")
-        sigramp.Init(self.pstat, Vinit, Vfinal, ScanRate, SampleRate, self.GamryCOM.PstatMode)
+        sigramp.Init(
+            self.pstat, Vinit, Vfinal, ScanRate, SampleRate, self.GamryCOM.PstatMode
+        )
         # measure ... this will do the setup as well
         self.measure(sigramp)
-        return {'measurement_type': 'potential_ramp',
-                'parameters': {'Vinit': Vinit, 'Vfinal': Vfinal, 'ScanRate': ScanRate, 'SampleRate': SampleRate},
-                'data': self.data}
+        return {
+            "measurement_type": "potential_ramp",
+            "parameters": {
+                "Vinit": Vinit,
+                "Vfinal": Vfinal,
+                "ScanRate": ScanRate,
+                "SampleRate": SampleRate,
+            },
+            "data": self.data,
+        }
 
-    def potential_cycle(self, Vinit: float, Vfinal: float,
-                        Vapex1: float, Vapex2: float,
-                        ScanInit: float, ScanApex: float, ScanFinal: float,
-                        HoldTime0: float, HoldTime1: float, HoldTime2: float,
-                        Cycles: int, SampleRate: float,
-                        control_mode: str):
-        if control_mode == 'galvanostatic':
+    def potential_cycle(
+        self,
+        Vinit: float,
+        Vfinal: float,
+        Vapex1: float,
+        Vapex2: float,
+        ScanInit: float,
+        ScanApex: float,
+        ScanFinal: float,
+        HoldTime0: float,
+        HoldTime1: float,
+        HoldTime2: float,
+        Cycles: int,
+        SampleRate: float,
+        control_mode: str,
+    ):
+        if control_mode == "galvanostatic":
             # do something
             pass
         else:
@@ -167,23 +219,50 @@ class gamry():
             pass
         # setup the experiment specific signal ramp
         sigramp = client.CreateObject("GamryCOM.GamrySignalRupdn")
-        sigramp.Init(self.pstat, Vinit, Vapex1, Vapex2, Vfinal, ScanInit, ScanApex, ScanFinal, HoldTime0, HoldTime1,
-                     HoldTime2, SampleRate, Cycles, self.GamryCOM.PstatMode)
+        sigramp.Init(
+            self.pstat,
+            Vinit,
+            Vapex1,
+            Vapex2,
+            Vfinal,
+            ScanInit,
+            ScanApex,
+            ScanFinal,
+            HoldTime0,
+            HoldTime1,
+            HoldTime2,
+            SampleRate,
+            Cycles,
+            self.GamryCOM.PstatMode,
+        )
         # measure ... this will do the setup as well
         self.measure(sigramp)
-        return {'measurement_type': 'potential_ramp',
-                'parameters': {'Vinit':Vinit, 'Vapex1':Vapex1, 'Vapex2':Vapex2, 'Vfinal':Vfinal, 'ScanInit':ScanInit, 'ScanApex':ScanApex,
-                               'ScanFinal':ScanFinal, 'HoldTime0':HoldTime0, 'HoldTime1':HoldTime1,
-                     'HoldTime2':HoldTime2, 'SampleRate':SampleRate, 'Cycles':Cycles},
-                'data': self.data}
+        return {
+            "measurement_type": "potential_ramp",
+            "parameters": {
+                "Vinit": Vinit,
+                "Vapex1": Vapex1,
+                "Vapex2": Vapex2,
+                "Vfinal": Vfinal,
+                "ScanInit": ScanInit,
+                "ScanApex": ScanApex,
+                "ScanFinal": ScanFinal,
+                "HoldTime0": HoldTime0,
+                "HoldTime1": HoldTime1,
+                "HoldTime2": HoldTime2,
+                "SampleRate": SampleRate,
+                "Cycles": Cycles,
+            },
+            "data": self.data,
+        }
 
-    def eis(self,start_freq,end_freq,points,pot_offset=0):
+    def eis(self, start_freq, end_freq, points, pot_offset=0):
         Zreal, Zimag, Zsig, Zphz, Zfreq = [], [], [], [], []
         is_on = False
         self.pstat.Open()
         for f in np.logspace(np.log10(start_freq), np.log10(end_freq), points):
 
-            self.dtaqcpiv = client.CreateObject('GamryCOM.GamryDtaqEis')
+            self.dtaqcpiv = client.CreateObject("GamryCOM.GamryDtaqEis")
             self.dtaqcpiv.Init(self.pstat, f, 0.05, 0.5, 20)
             self.dtaqcpiv.SetCycleMin(100)
             self.dtaqcpiv.SetCycleMax(50000)
@@ -201,9 +280,9 @@ class gamry():
                 raise gamry_error_decoder(e)
             if f < 10:
                 client.PumpEvents(10)
-            if f>1000:
+            if f > 1000:
                 client.PumpEvents(0.1)
-            if f<1000:
+            if f < 1000:
                 client.PumpEvents(1)
 
             Zreal.append(self.dtaqsink.dtaq.Zreal())
@@ -215,11 +294,18 @@ class gamry():
             del connection
         self.pstat.SetCell(self.GamryCOM.CellOff)
         self.pstat.Close()
-        return {'measurement_type': 'eis',
-                'parameters': {'tart_freq':start_freq,'end_freq':end_freq,'points':points,'pot_offset':pot_offset},
-                'data': [Zreal,Zimag,Zfreq]}
+        return {
+            "measurement_type": "eis",
+            "parameters": {
+                "tart_freq": start_freq,
+                "end_freq": end_freq,
+                "points": points,
+                "pot_offset": pot_offset,
+            },
+            "data": [Zreal, Zimag, Zfreq],
+        }
 
-    def ocv(self,start_freq,end_freq,points,pot_offset=0):
+    def ocv(self, start_freq, end_freq, points, pot_offset=0):
         Zreal, Zimag, Zsig, Zphz, Zfreq = [], [], [], [], []
         is_on = False
         self.pstat.Open()
@@ -228,10 +314,10 @@ class gamry():
             if self.pstat.VchOffsetEnable():
                 self.poti.pstat.SetVchOffset(pot_offset)
             else:
-                print('Have offset but could not enable')
+                print("Have offset but could not enable")
         for f in np.logspace(np.log10(start_freq), np.log10(end_freq), points):
 
-            self.dtaqcpiv = client.CreateObject('GamryCOM.GamryDtaqEis')
+            self.dtaqcpiv = client.CreateObject("GamryCOM.GamryDtaqEis")
             self.dtaqcpiv.Init(self.pstat, f, 0.1, 0.5, 20)
             self.dtaqcpiv.SetCycleMin(100)
             self.dtaqcpiv.SetCycleMax(50000)
@@ -261,11 +347,20 @@ class gamry():
             del connection
         self.pstat.SetCell(self.GamryCOM.CellOff)
         self.pstat.Close()
-        return {'measurement_type': 'eis',
-                'parameters': {'tart_freq':start_freq,'end_freq':end_freq,'points':points,'pot_offset':pot_offset},
-                'data': [Zreal,Zimag,Zfreq]}
-#exaple:
-'''
+        return {
+            "measurement_type": "eis",
+            "parameters": {
+                "tart_freq": start_freq,
+                "end_freq": end_freq,
+                "points": points,
+                "pot_offset": pot_offset,
+            },
+            "data": [Zreal, Zimag, Zfreq],
+        }
+
+
+# exaple:
+"""
 import numpy as np
 poti = gamry()
 ret = poti.signal_array(1,0.0001,np.sin(np.linspace(0,np.pi*5,1000)).tolist())
@@ -290,4 +385,4 @@ plt.xlabel('step')
 plt.ylabel('Current [A]')
 plt.show()
 
-'''
+"""
