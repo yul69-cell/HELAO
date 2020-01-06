@@ -5,10 +5,8 @@ import json
 import time
 
 if __package__:
-    # can import relative path in package mode
-    from ..config.config import *
-
-    print("imported config.py from package path")
+    # can import directly in package mode
+    print("importing config vars from package path")
 else:
     # interactive kernel mode requires path manipulation
     cwd = os.getcwd()
@@ -16,11 +14,11 @@ else:
     if os.path.basename(pwd) == "HELAO":
         sys.path.insert(0, pwd)
     if pwd in sys.path or os.path.basename(cwd) == "HELAO":
-        from config.config import *
-
-        print("imported config.py from absolute path")
+        print("importing config vars from sys.path")
     else:
-        print("unable to find config.py, current working directory is {}".format(cwd))
+        raise ModuleNotFoundError("unable to find config vars, current working directory is {}".format(cwd))
+
+from config.config import *
 
 if GALIL_SIMULATE:
     import gclib_simulate as gclib
