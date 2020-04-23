@@ -1,10 +1,28 @@
 # shell: uvicorn motion_server:app --reload
 
+import os, sys
+
+if __package__:
+    # can import directly in package mode
+    print("importing config vars from package path")
+else:
+    # interactive kernel mode requires path manipulation
+    cwd = os.getcwd()
+    pwd = os.path.dirname(cwd)
+    print(pwd)
+    if os.path.basename(pwd) == "HELAO":
+        sys.path.insert(0, pwd)
+    if pwd in sys.path or os.path.basename(cwd) == "HELAO":
+        print("importing config vars from sys.path")
+    else:
+        raise ModuleNotFoundError("unable to find config vars, current working directory is {}".format(cwd))
+
 from enum import Enum
 import time
 from fastapi import FastAPI
 import uvicorn
-from galil_driver import *
+# from galil_driver import *
+from driver.galil_simulate import *
 from pydantic import BaseModel
 
 app = FastAPI()
