@@ -40,9 +40,32 @@ async def pot_potential_ramp_wrap(
 ):
     return return_class(**poti.potential_ramp(Vinit, Vfinal, ScanRate, SampleRate))
 
+@app.get("/potentiostat/get/potential_cycle_simulate")
+async def pot_potential_cycle_simulate(
+    Vinit: float,
+    Vfinal: float,
+    Vapex1: float,
+    Vapex2: float,
+    ScanRate:float,
+    Cycles: int,
+    SampleRate: float,
+    control_mode: str,
+):
+    return return_class(
+        **poti.potential_cycle(
+            Vinit,
+            Vfinal,
+            Vapex1,
+            Vapex2,
+            ScanRate,
+            Cycles,
+            SampleRate,
+            control_mode,
+        )
+    )
 
 @app.get("/potentiostat/get/potential_cycle")
-async def pot_potential_ramp_wrap(
+async def pot_potential_cycle(
     Vinit: float,
     Vfinal: float,
     Vapex1: float,

@@ -108,6 +108,33 @@ def get_motor_block(axis="x"):
     else:
         return True
 
+def iblocking_cv_simulate(
+    Vinit: float,
+    Vfinal: float,
+    Vapex1: float,
+    Vapex2: float,
+    Cycles: int,
+    SampleRate: float,
+    ScanRate:float,
+    control_mode: str,
+    blockd: dict,
+):
+    blockd["motion"] = True
+    blockd["potentiostat"] = True
+    res_echem = requests.get(
+        "{}/potentiostat/get/potential_cycle_simulate".format(echem_url),
+        params={
+            "Vinit": Vinit,
+            "Vfinal": Vfinal,
+            "Vapex1": Vapex1,
+            "Vapex2": Vapex2,
+            "Cycles": Cycles,
+            "SampleRate": SampleRate,
+            "ScanRate": ScanRate,
+            "control_mode": control_mode,
+        },
+    ).json()
+    return res_echem
 
 def iblocking_cv(
     Vinit: float,
@@ -175,34 +202,48 @@ def pulse(Cycles: int, SampleRate: float, arr: list, blockd: dict):
     ).json()
     return res_echem
 
-
-def pump_on():
+#on/off port =4
+def pump_on(port):
     res_io = requests.get(
-        "{}/io/set/digital_out_on".format(motion_url), params={"port": 4}
+        "{}/io/set/digital_out_on".format(motion_url), params={"port": port}
     ).json()
     return str(res_io)
 
 
-def pump_off():
+def pump_off(port):
     res_io = requests.get(
-        "{}/io/set/digital_out_off".format(motion_url), params={"port": 4}
+        "{}/io/set/digital_out_off".format(motion_url), params={"port": port}
+    ).json()
+    return str(res_io)
+
+#backward or forward = 7
+def pump_forward(port):
+    res_io = requests.get(
+        "{}/io/set/digital_out_off".format(motion_url), params={"port": port}
     ).json()
     return str(res_io)
 
 
-def pump_forward():
+def pump_backward(port):
     res_io = requests.get(
-        "{}/io/set/digital_out_off".format(motion_url), params={"port": 7}
+        "{}/io/set/digital_out_on".format(motion_url), params={"port": port}
+    ).json()
+    return str(res_io)
+
+#valves
+def valve_on(port):
+    res_io = requests.get(
+        "{}/io/set/digital_out_on".format(motion_url), params={"port": port}
     ).json()
     return str(res_io)
 
 
-def pump_backward():
+def valve_off(port):
     res_io = requests.get(
-        "{}/io/set/digital_out_on".format(motion_url), params={"port": 7}
+        "{}/io/set/digital_out_off".format(motion_url), params={"port": port}
     ).json()
-
-
+    return str(res_io)
+    
 def light_on(port=0):
     res_io = requests.get(
         "{}/io/set/digital_out_on".format(motion_url), params={"port": port}
