@@ -136,6 +136,59 @@ def iblocking_cv_simulate(
     ).json()
     return res_echem
 
+
+def iblocking_CP(
+    Iinit: float,
+    Tinit: float,
+    Istep1: float,
+    Tstep1: float,
+    Istep2: float,
+    Tstep2: float,
+    SampleRate: float
+):
+    blockd["motion"] = True
+    blockd["potentiostat"] = True
+    res_echem = requests.get(
+        "{}/potentiostat/get/chrono_pot".format(echem_url),
+        params={
+            "Iinit": Iinit,
+            "Tinit": Tinit,
+            "Istep1": Istep1,
+            "Tstep1": Tstep1,
+            "Istep2": Istep2,
+            "Tstep2": Tstep2,
+            "SampleRate": SampleRate
+        },
+    ).json()
+    return res_echem
+
+
+def iblocking_CA(
+    Vinit: float,
+    Tinit: float,
+    Vstep1: float,
+    Tstep1: float,
+    Vstep2: float,
+    Tstep2: float,
+    SampleRate: float
+):
+    blockd["motion"] = True
+    blockd["potentiostat"] = True
+    res_echem = requests.get(
+        "{}/potentiostat/get/chrono_amp".format(echem_url),
+        params={
+            "Vinit": Vinit,
+            "Tinit": Tinit,
+            "Vstep1": Vstep1,
+            "Tstep1": Tstep1,
+            "Vstep2": Vstep2,
+            "Tstep2": Tstep2,
+            "SampleRate": SampleRate
+        },
+    ).json()
+    return res_echem
+
+
 def iblocking_cv(
     Vinit: float,
     Vfinal: float,
@@ -150,7 +203,7 @@ def iblocking_cv(
     Cycles: int,
     SampleRate: float,
     control_mode: str,
-    blockd: dict,
+    blockd: dict
 ):
     blockd["motion"] = True
     blockd["potentiostat"] = True
@@ -243,7 +296,7 @@ def valve_off(port):
         "{}/io/set/digital_out_off".format(motion_url), params={"port": port}
     ).json()
     return str(res_io)
-    
+
 def light_on(port=0):
     res_io = requests.get(
         "{}/io/set/digital_out_on".format(motion_url), params={"port": port}

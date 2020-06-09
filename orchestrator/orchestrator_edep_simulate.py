@@ -80,9 +80,7 @@ for sno, dx, dy in zip([i for i in range(len(x))], x, y):
     pos_temp=actions.get_positions()
     print(pos_temp)
     
-# =============================================================================
-#     ##########################
-#     #require an additional driver for synringe pump
+#TODO additional driver for synringe pump
 #     ## refill the cell by 
 #     #chemical 1:
 #     actions.pump_on()

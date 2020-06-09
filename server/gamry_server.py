@@ -33,6 +33,17 @@ class return_class(BaseModel):
     parameters: dict
     data: list
 
+@app.get("/potentiostat/get/chrono_amp")
+async def pot_chrono_amp(
+    Vinit: float, Tinit: float, Vstep1: float, Tstep1: float, Vstep2: float, Tstep2: float, SampleRate: float
+):
+    return return_class(**poti.chrono_amp(Vinit, Tinit, Vstep1, Tstep1, Vstep2, Tstep2, SampleRate))
+
+@app.get("/potentiostat/get/chrono_pot")
+async def gal_chrono_pot(
+    Iinit: float, Tinit: float, Istep1: float, Tstep1: float, Istep2: float, Tstep2: float, SampleRate: float
+):
+    return return_class(**poti.chrono_pot(Iinit, Tinit, Istep1, Tstep1, Istep2, Tstep2, SampleRate))
 
 @app.get("/potentiostat/get/potential_ramp")
 async def pot_potential_ramp_wrap(

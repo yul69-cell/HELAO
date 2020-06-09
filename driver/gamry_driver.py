@@ -98,22 +98,30 @@ class gamry:
             return {"potentiostat_connection": "closed"}
         except:
             return {"potentiostat_connection": "error"}
-
+#TODO: this section is not very clear to me..., where the gstep comes from?
     def measurement_setup(self, gsetup="sweep"):
         self.open_connection()
         if gsetup == "sweep":
             g = "GamryCOM.GamryDtaqCpiv"
         if gsetup == "cv":
             g = "IGamryDtaqRcv"
+        if gsetup == "CA" or gsetup == "CP":
+            g = "IGamryDtaqChrono"
         self.dtaqcpiv = client.CreateObject(g)
-        self.dtaqcpiv.Init(self.pstat)
-
+        if gsetup == "sweep" or gsetup == "cv":
+            self.dtaqcpiv.Init(self.pstat)
+        if gsetup == "CA":
+            self.dtaqcpiv.Init(self.pstat, self.ChronoAmp)
+        if gsetup == "CP":
+            self.dtaqcpiv.Init(self.pstat, self.ChronoPot)
         self.dtaqsink = GamryDtaqEvents(self.dtaqcpiv)
 
-    def measure(self, sigramp):
+    def measure(self, sigramp, gsetup=None):
         print("Opening Connection")
         ret = self.open_connection()
         self.pstat.SetIERange(8)
+        # IErange: 0=3 pA, 1=30pA, 2=300pA, 3=3nA, 4=30nA, 5=300nA, 6=3uA, ...
+        #TODO: IERange is a parameter and should be placed somewhere else
 
         print(ret)
         # push the signal ramp over
@@ -121,7 +129,10 @@ class gamry:
         self.pstat.SetSignal(sigramp)
 
         self.pstat.SetCell(self.GamryCOM.CellOn)
-        self.measurement_setup()
+        if gsetup==None:
+            self.measurement_setup()
+        else:
+            self.measurement_setup(gsetup) #TODO: good to add gsetup?
         self.connection = client.GetEvents(self.dtaqcpiv, self.dtaqsink)
         try:
             self.dtaqcpiv.Run(True)
@@ -170,6 +181,60 @@ class gamry:
                 "Profile": arr,
             },
             "data": np.array(self.data).tolist(),
+        }
+
+#driver for CA tests
+#TODO: need to test this methid
+    def chrono_amp(
+        self, Vinit: float, Tinit: float, Vstep1: float, Tstep1: float, Vstep2: float, Tstep2: float, SampleRate: float
+    ):
+        # setup the experiment specific signal ramp
+        sigramp = client.CreateObject("GamryCOM.GamrySignalDstep")
+        sigramp.Init(
+            self.pstat, Vinit, Tinit, Vstep1, Tstep1, Vstep2, Tstep2, SampleRate, self.GamryCOM.PstatMode
+        )
+        # measure ... this will do the setup as well
+        gsetup='CA'
+        self.measure(sigramp, gsetup)
+        return {
+            "measurement_type": "chrono_amp",
+            "parameters": {
+                "Vinit": Vinit,
+                "Tinit": Tinit,
+                "Vstep1": Vstep1,
+                "Tstep1": Tstep1,
+                "Vstep2": Vstep2,
+                "Tstep2": Tstep2,
+                "SampleRate": SampleRate
+            },
+            "data": self.data,
+        }
+
+#driver for CP tests
+#TODO: need to test this methid
+    def chrono_pot(
+        self, Iinit: float, Tinit: float, Istep1: float, Tstep1: float, Istep2: float, Tstep2: float, SampleRate: float
+    ):
+        # setup the experiment specific signal ramp
+        sigramp = client.CreateObject("GamryCOM.GamrySignalDstep")
+        sigramp.Init(
+            self.pstat, Iinit, Tinit, Istep1, Tstep1, Istep2, Tstep2, SampleRate, self.GamryCOM.GstatMode
+        )
+        # measure ... this will do the setup as well
+        gsetup='CP'
+        self.measure(sigramp, gsetup)
+        return {
+            "measurement_type": "chrono_pot",
+            "parameters": {
+                "Iinit": Iinit,
+                "Tinit": Tinit,
+                "Istep1": Istep1,
+                "Tstep1": Tstep1,
+                "Istep2": Istep2,
+                "Tstep2": Tstep2,
+                "SampleRate": SampleRate
+            },
+            "data": self.data,
         }
 
     def potential_ramp(
@@ -234,7 +299,8 @@ class gamry:
             self.GamryCOM.PstatMode,
         )
         # measure ... this will do the setup as well
-        self.measure(sigramp)
+        gsetup="cv"
+        self.measure(sigramp, gsetup)
         return {
             "measurement_type": "potential_ramp",
             "parameters": {
